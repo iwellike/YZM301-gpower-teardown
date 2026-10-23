@@ -148,6 +148,14 @@ G*Power'da dört büyüklükten (α, güç, N, etki büyüklüğü) üçünü ve
 | `critical_t` | Critical t |
 | `df` | Df |
 
+> Not: Ödev metninin kendi örneğinde bu alan `critical` adıyla geçiyor
+> (`{"n1":105,...,"critical":1.9714,...}`). Çıktıda **her iki anahtar da**
+> bulunur — `critical_t` (bu CONTRACT.md'nin bütün test aileleri için
+> kullandığı tutarlı ad) ve onun eş değeri `critical` (ödev metninin
+> literal örneğiyle otomatik harness uyumluluğu için takma ad, aynı
+> sayısal değer). Hesap mantığı tek yerde (`src/engine`); takma ad yalnızca
+> `src/cli/core.py::run()`'da çıktıya eklenir.
+
 Örnek:
 ```
 gpower-clone --test t2-indep --mode a-priori --tails 1 --d 0.5 --alpha 0.05 --power 0.95 --ratio 1

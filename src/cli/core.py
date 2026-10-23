@@ -131,6 +131,8 @@ def run(argv):
     except engine.EngineError as exc:
         raise CliError(exc.code, exc.field, exc.message)
 
+    if "critical_t" in result:
+        result["critical"] = result["critical_t"]  # ödev metnindeki örnek anahtar adıyla uyum (CONTRACT.md 4.3)
     return result, 0
 
 
