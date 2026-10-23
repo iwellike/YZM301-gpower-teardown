@@ -122,7 +122,9 @@ def set_edit(win, auto_id, value):
 
 def get_edit(win, auto_id):
     e = win.child_window(auto_id=auto_id, control_type="Edit")
-    return e.window_text()
+    # window_text() pencere/kontrol ADINI dondurebilir (orn. "Parameter 11");
+    # gercek deger icin UIA ValuePattern (get_value) kullanilmali.
+    return e.get_value() if hasattr(e, "get_value") else e.window_text()
 
 
 def screenshot(win, name):
