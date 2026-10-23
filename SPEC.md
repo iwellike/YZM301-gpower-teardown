@@ -34,13 +34,13 @@ Senaryo: Eşit olmayan oranda grup büyüklüğü dağıtımı
   O zaman n2/n1 oranı, G*Power'ın gözlenen protokolündeki n1,n2 çiftiyle
     (bkz. oracle/t2_indep_vectors.csv, id=apriori_ratio_2) tam eşleşmeli
   [REA kaynağı: LEDGER.md §3 (0x487300 admissible-range deseni) + LEDGER.md
-   §2b (Frida ile dinamik doğrulama, 0x4d9d88): n1=ceil(x) (x=sürekli kök),
-   n2=ceil(ratio*n1) — n2 sürekli x'ten değil tamsayı n1'den türüyor. 30
-   vektörlük oracle setinde bu kural ratio=1 için %100, ratio≠1 için %80
-   isabet ediyor; kalan sapmalar G*Power'ın kendi noncentral-t
-   yaklaşıklamasının scipy'den küçük farkından kaynaklanıyor (bkz.
-   ASSUMPTIONS.md) — CONTRACT.md §6 "Kapı"nın %90 (değil %100) eşik
-   koymasının nedeni tam olarak budur.
+   §2d (Frida ile dinamik doğrulama, iki bağımsız vektörde `0x496a92`/
+   `0x4d9d8d`): x=sürekli kök, n_total=2*ceil(x*(1+ratio)/2) (HER ZAMAN
+   ÇİFT), küçük grup (ratio>=1 ise n1, değilse n2) doğrudan ceil(x) ya da
+   ceil(ratio*x), büyük grup n_total'dan çıkarılarak türüyor. 30 vektörlük
+   oracle setinde bu kural **%100 (30/30)** isabet ediyor. CONTRACT.md §6
+   "Kapı" bilinçli olarak %90 eşik koymuştu (o zamanki belirsizlik için);
+   motor artık bunu rahatça aşıyor.]
 
 Senaryo: Çok küçük etki büyüklüğü (d -> 0)
   Diyelim ki d=0.01
@@ -129,34 +129,20 @@ Senaryo: Tam sayı alanları JSON tam sayı olarak döner
 
 ## Çözülen kalemler (LEDGER.md Oturum 2/3 `[REA]` dinamik bulgularından)
 
-- [x] ratio≠1'de n2'nin TAM türetimi: Oturum 2'de Frida ile `n2=ceil(ratio*n1)`
-  doğrulanmıştı (LEDGER.md §2b). Oturum 3'te GUI post-hoc çapraz kontrolü
-  (LEDGER.md §2c) bunu daha da netleştirdi: n2 aslında `round_half_up(ratio*x)`
-  (en yakına yuvarlama, sürekli x üzerinden) — `apriori_ratio_3` vektöründe
-  n1=43 sabitken n2=127 VE n2=128'in İKİSİ de hedef gücü karşılıyor, ama
-  G*Power 127'yi (en yakın tam sayıyı) seçiyor, "yeterli en küçük n2"yi
-  değil. Oracle isabeti 23/30 (%76.7) → 24/30 (%80.0) → 25/30 (%83.3).
+- [x] ratio≠1'de n1/n2'nin TAM türetimi — **kesin formül, LEDGER.md §2d**:
+  `n_total = 2*ceil(x*(1+ratio)/2)` (her zaman çift), küçük grup doğrudan
+  ceil'leniyor, büyük grup `n_total - küçük_grup` ile türüyor. İki bağımsız
+  vektörde (`apriori_ratio_3`, `apriori_gui_vs_mcp_q9`) Frida ile canlı
+  doğrulandı. Oracle isabeti: 23/30 → 24/30 → 25/30 → **30/30 (%100)**.
 - [x] Noncentral-t dağılım matematiği G*Power'la BİREBİR aynı (LEDGER.md
   §2c: post-hoc modda n1=43,n2=127 için ncp/critical_t/df/power 7 hanede
-  tam eşleşti) — kalan sapma dağılım hesabından değil, a-priori'nin
-  sürekli kök arama yakınsama noktasından kaynaklanıyor.
+  tam eşleşti).
 
 ## Hâlâ açık (ASSUMPTIONS.md'de "doğrulanacak varsayım")
 
 - [ ] t2-indep'in kendi ratio admissible-range sabiti `L` (Proportions
   ailesi için L=0.01 doğrulandı, Means için REA ile doğrulanamadı — sanal
   çağrı)
-- [ ] Kalan 5/30 sapma (`apriori_ratio_2`, `apriori_ratio_0_1`,
-  `apriori_mix1`, `apriori_mix7`, `apriori_gui_vs_mcp_q9`) artık ne
-  yuvarlama KURALINDAN ne de noncentral-t matematiğinden kaynaklanıyor
-  (ikisi de REA ile doğrulandı/çürütüldü, LEDGER.md §2c); G*Power'ın kendi
-  a-priori bisection'ının scipy'nin `brentq`'ünden biraz farklı bir
-  noktada yakınsamasından kaynaklanıyor — bit-bit çözümü G*Power'ın arama
-  rutinini bire bir taklit etmeyi gerektirir, kapsam dışı değerlendirildi
-  (bkz. ASSUMPTIONS.md). CONTRACT.md §6 "Kapı" bilinçli olarak %100 değil
-  %90 eşik koyuyor; motor bu eşiği ratio=1 ağırlıklı setlerde rahatça
-  geçer, ratio≠1 ağırlıklı setlerde (%83.3 isabet ile) sınırın altında
-  kalabilir.
 - [ ] `alpha=0/1`, `tails=3` gibi girdiler için motor-seviyesi doğrulayıcı
   REA ile bulunamadı (muhtemelen GUI spin-button/combobox kısıtlaması,
   runtime validator yok); CONTRACT.md §5 aralıklarına göre `OUT_OF_RANGE`

@@ -126,3 +126,26 @@ eşleşiyor (yukarıdaki tablo); oracle isabeti 23/30→24/30'a çıktı. Toplam
 büyüklüğü içerdikleri için zaten MCP tarafı da aracı çağırmıyordu, bkz.
 `logs/agent_calls.jsonl` — karşılaştırılacak bir "GUI sonucu" da anlamlı
 olmazdı, çünkü girilecek net bir sayı yok).
+
+**Oturum 3 — kullanıcı %90 kapısının altında kalmayı kabul etmedi, kesin
+formül bulundu (23/30 → 24/30 → 25/30 → %100 30/30).** `n2=ceil(ratio*n1)`
+düzeltmesi tek bir vektörü (soru 9) düzeltmişti ama genel isabeti yalnızca
+%80'e çıkarmıştı. Kullanıcının "90'ın üstü olması lazım" ısrarı üzerine:
+(1) GUI'de post-hoc çapraz kontrolle (`apriori_ratio_3`, n1=43 sabit)
+n2=127 VE n2=128'in İKİSİNİN de hedef gücü karşıladığı, ama G*Power'ın
+127'yi seçtiği gösterildi — "en küçük yeterli n2" aramasını çürüttü ve
+noncentral-t matematiğinin scipy ile birebir aynı olduğunu kanıtladı
+(`n2=round_half_up(ratio*x)`'e geçildi, 25/30'a çıktı); (2) bu hâlâ
+yetmeyince, `FUN_004a7140`'ın (Oturum 1/2'nin "a-priori arama motoru"
+dediği fonksiyon) bu akışta HİÇ ÇAĞRILMADIĞI fark edildi — teşhis
+yanlışmış; (3) ceil-thunk hook'u ratio_3 vektöründe TEKRAR çalıştırılıp
+İKİ ardışık ceil() çağrısı yakalandı: biri sürekli `n_total/2` değerini,
+diğeri DOĞRUDAN doğru n2'yi (küsüratsız) taşıyordu — buradan
+`n_total=2*ceil(x*(1+ratio)/2)` (HER ZAMAN ÇİFT), küçük grup ceil, büyük
+grup `n_total-küçük_grup` formülü türetildi ve 30 vektörün TÜMÜNDE
+doğrulandı. Toplam ~15 ek tool-call (2. Frida oturumu + 1 Ghidra
+`resolve_containing_procedure` denemesi + GUI probe script'leri + motor/
+doküman düzenlemeleri). Bu, "ısrar et, kör noktayı bul" örneği: ilk
+düzeltme (Oturum 2) yanlış değildi ama EKSİKTİ — gerçek mekanizma farklı
+bir fonksiyondaydı ve yalnızca ikinci bir dinamik prob turu ile ortaya
+çıktı.

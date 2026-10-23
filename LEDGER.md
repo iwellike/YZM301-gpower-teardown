@@ -117,6 +117,52 @@ sapmanın noncentral-t matematiğinden DEĞİL arama yakınsamasından geldiği 
 - Bu bulgularla `n2 = round_half_up(ratio × x)` (ratio=1 için trivial
   `n2=n1`) kuralına geçildi; 30 vektörde isabet **24/30 → 25/30 (%83.3)**.
 
+## 2d. Oturum 3 (devam): KESİN FORMÜL — n_total HER ZAMAN ÇİFT'e zorlanıyor
+
+- `[REA]` Kullanıcı %90 kapısının altında kalmayı kabul etmeyince,
+  `FUN_004a7140`'ın bu akışta HİÇ ÇAĞRILMADIĞI fark edildi (giriş hook'u
+  sıfır kez tetiklendi) — Oturum 1/2'nin "bu fonksiyon t2-indep'in
+  a-priori arama motoru" teşhisi YANLIŞTI; gerçek mekanizma başka bir
+  (statik olarak hâlâ çözülemeyen, ama artık dinamik olarak haritalanan)
+  koddaymış.
+- `[REA]` Ceil thunk hook'u (§2b'deki teknik) `apriori_ratio_3` vektörü
+  (tails=2,d=0.5,alpha=0.05,power=0.8,ratio=3 → n1=43,n2=127) üzerinde
+  TEKRAR çalıştırıldı. İki ardışık ceil() çağrısı yakalandı:
+  - `0x496a92` (dönüş adresi), argüman = `84.6923247795`
+  - `0x4d9d8d` (dönüş adresi, aynı §2b'deki adres), argüman = `127`
+    (küsüratsız, TAM SAYI)
+  `apriori_gui_vs_mcp_q9` vektöründe (§2b, n1=32,n2=64) aynı iki adresten
+  sırasıyla `47.1424138863` ve `64` (küsüratsız) yakalanmıştı.
+- `[REA]` Matematiksel analiz: `0x496a92`'nin değeri her iki vakada da
+  **sürekli n_total'ın YARISI** (`x*(1+ratio)/2`) ile birebir eşleşiyor
+  (47.1424138863 = 31.428276×3/2; 84.6923247795 = 42.346162×4/2). Ve
+  `0x4d9d8d`'nin değeri her iki vakada da **doğru n2'nin TAMAMI** —
+  `ceil(0x496a92'nin değeri)×2 − n1` formülüyle tam üretiliyor
+  (ceil(47.1424)×2−32 = 48×2−32 = 64 ✓; ceil(84.6923)×2−43 = 85×2−43 = 127 ✓).
+  Bu, `n_total`'ın bağımsız ceil(n1)+ceil(ratio×n1) DEĞİL, **önce yarıya
+  bölünüp ceil'lenip ikiyle çarpılarak ÇİFT SAYIYA zorlandığını**, n2'nin
+  bu çift n_total'dan n1 çıkarılarak türetildiğini kanıtlıyor.
+- **Kesin formül (ratio≥1 için; ratio<1'de n1/n2 rolleri simetrik olarak
+  değişir, küçük grup hangisiyse o ceil'lenir):**
+  ```
+  x = sürekli kök (actual_power(x, ratio*x) = power)
+  n_total = 2 * ceil(x*(1+ratio)/2)        # HER ZAMAN ÇİFT
+  n1 = ceil(x)                              # ratio>=1: küçük grup
+  n2 = n_total - n1
+  ```
+  (ratio<1 için: `n2 = ceil(ratio*x)` küçük grup, `n1 = n_total - n2`.)
+  **30 vektörlük oracle setinde sonuç: 30/30 (%100) tam eşleşme** —
+  önceki üç kademeli düzeltmeyi (23→24→25/30) de geride bıraktı.
+- Bu, `src/engine/t2_indep.py::solve_a_priori`'ye işlendi. Tüm 42 test
+  geçiyor. **Sınır:** `0x496a92`/`0x4d9d8d`'yi içeren fonksiyonlar Ghidra'nın
+  statik fonksiyon sınırları tarafından hâlâ tanınmıyor
+  (`resolve_containing_procedure` → `not_in_procedure`, muhtemelen yalnızca
+  vtable çağrısıyla ulaşılan kod); formülün KENDİSİ 2 bağımsız canlı vaka
+  üzerinden (ratio=2 ve ratio=3, farklı tails) tersine türetildi ve 30
+  vektörün TÜMÜNDE doğrulandı — ama "bu fonksiyonun adı X'tir, şu satırda
+  şunu yapıyor" seviyesinde bir decompile kanıtı değil, davranışsal/dinamik
+  bir kanıt.
+
 ## 3. Eşit olmayan oran (ratio ≠ 1) dağıtımı
 
 - `[AJAN]` (doğrulanacak) `ratio` = N2/N1 girildiğinde G*Power'ın önce n1'i

@@ -6,18 +6,38 @@
 
 ## 1. A-priori N arama ve yuvarlama
 
-**Varsayım:** Verilen `d, alpha, power, tails, ratio` için önce `n1`
-üzerinde sürekli (gerçel sayı) bir kök bulunur — `n2 = ratio * n1` sabit
-tutularak `actual_power(n1, ratio*n1) = power` eşitliğini sağlayan `x`.
-Sonra `n1 = ceil(x)`, `n2 = ceil(ratio * n1)` — **n2, sürekli x'ten değil,
-ÖNCE yuvarlanmış tamsayı n1'den türetiliyor** (bkz. güncelleme aşağıda,
-LEDGER.md §2b: Oturum 2'de Frida ile dinamik olarak doğrulandı).
+**SONUÇ (Oturum 3, kesin, LEDGER.md §2d):** `oracle/t2_indep_vectors.csv`'nin
+**30 vektörünün TÜMÜNDE (%100)** tam eşleşen formül:
 
-**Gerekçe:**
-- LEDGER.md §2/§4 `[REA]`: GPowerNT.exe'de a-priori arama motoru
-  (`0x4a7140`) gerçekten geometrik parantezleme + bisection ile sürekli bir
-  değeri bulup sonra CRT `ceil()` çağırıyor — bu REA ile kanıtlanmış gerçek
-  bir mekanizma, varsayım değil.
+```
+x = sürekli kök: actual_power(x, ratio*x) = power
+n_total = 2 * ceil(x * (1+ratio) / 2)      # HER ZAMAN ÇİFT sayıya zorlanıyor
+ratio >= 1:  n1 = ceil(x);         n2 = n_total - n1
+ratio <  1:  n2 = ceil(ratio*x);   n1 = n_total - n2
+```
+
+Yani n1/n2 bağımsız ceil'lenmiyor: **n_total önce (yarıya bölüp ceil'leyip
+ikiyle çarparak) ÇİFT bir tam sayıya zorlanıyor**, küçük grup (ratio'ya göre
+hangisiyse) doğrudan ceil'leniyor, büyük grup `n_total - küçük_grup` ile
+TÜRETİLİYOR (kendi başına yuvarlanmıyor).
+
+**Kanıt (dinamik REA, iki bağımsız vakada):** CRT `ceil` thunk'ına hook
+takılıp `apriori_ratio_3` (n1=43,n2=127) ve `apriori_gui_vs_mcp_q9`
+(n1=32,n2=64) vektörleri GUI'de çalıştırıldı. Her ikisinde de İKİ ceil()
+çağrısı yakalandı: biri (`0x496a92`) sürekli `x*(1+ratio)/2` değerini
+taşıyor (47.1424=31.4283×3/2; 84.6923=42.3462×4/2), diğeri (`0x4d9d8d`)
+DOĞRUDAN doğru n2 değerini (64, 127 — küsüratsız) taşıyor —
+`ceil(ilk_değer)×2 − n1` formülüyle tam üretildiği doğrulandı. Detay ve
+tüm ara denemeler: LEDGER.md §2b/§2c/§2d.
+
+**Bu sonuca giden hipotez tarihçesi (hepsi daha düşük isabetliydi):**
+- LEDGER.md §2/§4 `[REA]`: GPowerNT.exe'de `0x4a7140` gerçekten geometrik
+  parantezleme + bisection ile sürekli bir değeri bulup sonra CRT `ceil()`
+  çağırıyor — bu kod GERÇEKTEN VAR (REA ile kanıtlandı), ama **Oturum 3'te
+  bu akışta HİÇ ÇAĞRILMADIĞI dinamik olarak doğrulandı** (LEDGER §2d) —
+  yani "bu, t2-indep'in a-priori arama motorudur" teşhisi YANLIŞTI; bu
+  fonksiyon G*Power'ın paylaşılan altyapısında başka bir yol için var
+  olabilir, t2-indep a-priori onu kullanmıyor.
 - Hangi değişkenin (n1 mi, n_total mi) doğrudan `ceil` edildiği ve ratio≠1
   durumunda ikinci değişkenin TAM olarak nasıl türetildiği sanal (vtable)
   çağrı olduğu için REA ile izlenemedi (LEDGER §2/§3 sınırlama notu).
@@ -38,70 +58,24 @@ LEDGER.md §2b: Oturum 2'de Frida ile dinamik olarak doğrulandı).
   **Seçilen: Hipotez 1** — en yüksek isabet, en basit, ve LEDGER'daki
   gerçek `ceil()` çağrısıyla doğrudan tutarlı.
 
-**Güncelleme (Oturum 2, dinamik REA):** Hipotez 1'in `n2=ceil(ratio*x)`
-alt-kuralı, Frida ile GPowerNT.exe'de canlı doğrulandı ve **düzeltildi**:
-gerçek ceil() çağrısının argümanı (adres `0x4d9d88`, bkz. LEDGER.md §2b)
-`ratio=2, n1=32` için tam `64.0` çıktı — bu, yalnızca n2'nin **sürekli x
-değil, önce yuvarlanmış tamsayı n1** üzerinden türetildiğinde mümkündür.
-Düzeltilmiş kural `n2=ceil(ratio*n1)` oracle setinde 23/30 (%76.7) →
-24/30 (%80.0) isabet veriyor. Bu artık `[AJAN]` ampirik tahmin değil,
-`[REA]` dinamik kanıt.
+**Ara adımlar (kısaca, hepsi yukarıdaki kesin formülle aşıldı):** Oturum 2
+`n2=ceil(ratio*n1)`'e geçip 23/30→24/30 çıkardı (Frida ile `0x4d9d88`'de
+`64.0` küsüratsız argüman gözlendi). Oturum 3 önce `apriori_ratio_3`'te
+n1=43 sabitken n2=127 VE n2=128'in İKİSİNİN de hedefi karşıladığını
+(dolayısıyla "en küçük yeterli n2" aramasının yanlış olduğunu) canlı
+gösterdi, `n2=round_half_up(ratio*x)`'e geçip 24/30→25/30 çıkardı — ama
+hâlâ %90 kapısının altındaydı. Kullanıcı bunu kabul etmeyip bit-bit arama
+replikasyonuna devam edilmesini isteyince, `FUN_004a7140`'ın bu akışta
+HİÇ ÇAĞRILMADIĞI (Oturum 1/2'nin fonksiyon teşhisi yanlışmış) fark edildi;
+ceil-thunk hook'u ratio_3 vektöründe TEKRAR çalıştırılınca yukarıdaki
+kesin `n_total`-tabanlı formül bulundu ve **30/30'a (%100)** çıktı. Tüm
+ara hipotezlerin REA kanıtı ve puanları LEDGER.md §2b/§2c/§2d'de.
 
-**Güncelleme (Oturum 3, kullanıcı %90 kapısını vurgulayınca ek araştırma):**
-`apriori_ratio_3` vektöründe (n1=43 sabit) GUI'de post-hoc ile n2=127 VE
-n2=128 ayrı ayrı sorgulandı — İKİSİ de hedef gücü karşılıyor, ama G*Power
-127'yi seçiyor (bkz. LEDGER.md §2c). Bu, "n1 sabit, hedefi karşılayan en
-küçük n2" aramasını KESİN OLARAK ÇÜRÜTÜYOR (en küçük yeterli n2 aslında
-122'ymiş, 127 değil) ve n2'nin **sürekli ratio×x değerinin en yakın tam
-sayıya yuvarlanması** olduğunu gösteriyor (127.0385→127, ceil değil).
-Ayrıca post-hoc'ta n1=43,n2=127 için G*Power'ın `(ncp,critical_t,df,power)`
-çıktısı motorun scipy tabanlı hesabıyla **birebir aynı** çıktı — yani
-noncentral-t MATEMATİĞİ doğru, sapma yalnızca a-priori modun sürekli kök
-arama/yakınsama noktasında. Kural `n2=round_half_up(ratio*x)` (ratio=1'de
-trivial `n2=n1`) olarak güncellendi: 24/30 (%80.0) → **25/30 (%83.3)**.
-Hâlâ %90 kapısının altında; kalan 5 sapma artık ne yuvarlama kuralı ne de
-dağılım matematiği hatası — G*Power'ın kendi bisection'ının scipy'nin
-`brentq`'ünden yakınsadığı NOKTANIN kendisi (muhtemelen LEDGER §4'teki
-erken-çıkan tolerans nedeniyle) biraz farklı. Bunu %100 gidermek
-G*Power'ın arama rutinini bit-bit taklit etmeyi gerektirir.
-
-**Gerçek G*Power ile canlı doğrulama (Oturum 1):** AI ajanı katmanını
-test ederken soru 9'un parametreleri (tails=1, d=0.8, alpha=0.01,
-power=0.9, ratio=2) hem MCP aracıyla hem **hâlâ açık olan gerçek G*Power
-3.1.9.7 GUI'sine** pywinauto ile girilip karşılaştırıldı: motor (düzeltme
-öncesi, `n2=ceil(ratio*x)`) `(n1=32, n2=63, n_total=95)` üretti, gerçek
-G*Power `(n1=32, n2=64, n_total=96)` verdi — `n1` tutarlı, `n2` tam 1
-birim sapıyordu. Oturum 2'de bu TAM VEKTÖR Frida ile tekrar canlı
-çalıştırıldı (LEDGER.md §2b); düzeltilmiş `n2=ceil(ratio*n1)` kuralı bu
-satırı tam eşleştirmişti. **Oturum 3'te `n2=round_half_up(ratio*x)`'e
-geçilince bu SATIR TEKRAR SAPTI** (round(62.8566)=63≠64) — dürüst not:
-`ceil(ratio*n1)` ve `round(ratio*x)` kuralları farklı alt kümeleri
-düzeltiyor, biri diğerinin düzelttiğini bazen bozuyor; `round(ratio*x)`
-NET olarak daha fazla satır doğru veriyor (25/30 > 24/30) ama evrensel
-bir çözüm değil, bkz. aşağıdaki güncel sapma listesi.
-
-**Bilinen sınır (dürüst değerlendirme, Oturum 3 SONRASI, güncel):** Kalan
-5 sapma (`n2=round_half_up(ratio*x)` kuralıyla): `apriori_ratio_2`
-(round(95.48)=95, gerekli 96), `apriori_ratio_0_1` (n1'in KENDİSİ
-348 vs 347 sapıyor, n2 değil), `apriori_mix1` (round(200.52)=201,
-gerekli 202), `apriori_mix7` (round(158.53)=159, gerekli 160),
-`apriori_gui_vs_mcp_q9` (round(62.86)=63, gerekli 64). Hepsinde G*Power'ın
-gerçek değeri round() sonucundan tam +1 FAZLA — ama bu beş satırda da
-LEDGER §2c'nin kanıtladığı gibi dağılım matematiği doğru, sapma yalnızca
-arama yakınsamasında. Hepsinde sapma tam ±1 birim ve yön (üste mi alta mı
-sapıyor) tutarsız — bu, basit bir
-"her zaman +1 ekle/çıkar" düzeltmesiyle çözülemeyeceğini, G*Power'ın kendi
-noncentral-t/F yaklaşıklamasının (Faul ve ark. 2007/2009'da tanımlanan seri
-yöntemi) tam eşik noktasında scipy'nin "kesin" hesabından çok küçük
-(1e-4 mertebesinde) farklı bir değer üretebileceğini gösteriyor. Bunu kesin
-olarak çözmek, G*Power'ın kendi sayısal kütüphanesini bit-bit yeniden
-üretmeyi gerektirir — kapsam dışı. **CONTRACT.md §6 "Kapı" bu nedenle %100
-değil %90 eşleşme istiyor; motor bu eşiği ratio=1 ağırlıklı setlerde
-rahatça geçer, ratio≠1 ağırlıklı setlerde sınırda kalabilir.**
-
-**Doğrulanacak:** Gizli vektörlerle differential test çalıştırıldığında N
-eşleşme oranı. Düşerse önce bu dosyadaki hipotez 1'in ratio≠1 dalını
-gözden geçirin.
+**CONTRACT.md §6 "Kapı" notu:** Sözleşme bilinçli olarak %100 değil %90
+eşik koymuştu (o zamanki belirsizlik payı için); motor artık pratik
+oracle setinin tamamında tam eşleşiyor, dolayısıyla gizli vektör setinde
+de güçlü bir performans bekleniyor — ama "gizli set farklı bir sınır
+durumu içerebilir" riski sıfırlanmış değil, yalnızca ÇOK daha düşük.
 
 ## 2. Ratio admissible aralığı
 

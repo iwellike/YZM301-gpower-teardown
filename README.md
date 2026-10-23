@@ -64,19 +64,14 @@ Ajan değerlendirmesini çalıştırmak için: `python -m src.agent.run_eval`.
 - **30 vektörlük pratik oracle seti** (`oracle/t2_indep_vectors.csv`, 29'u
   G*Power 3.1.9.7 GUI'sinden doğrudan toplandı, 1'i Oturum 1'de ajan
   değerlendirmesi sırasında canlı G*Power'a karşı ek doğrulandı — sınır
-  değerler ve ratio≠1 dahil): n1/n2/n_total **tam eşleşme oranı 25/30 =
-  %83.3** (Oturum 2: Frida ile dinamik REA, `n2=ceil(ratio*n1)` → 23/30'dan
-  24/30'a; Oturum 3: GUI post-hoc çapraz kontrolü `n2=round_half_up(ratio*x)`
-  kuralını doğruladı → 24/30'dan 25/30'a, bkz. LEDGER.md §2b/§2c). ratio=1
-  olan 19 vektörün **tamamında %100** eşleşme; kalan 5 sapmada hem
-  yuvarlama kuralı hem noncentral-t matematiği REA ile doğrulandı/çürütüldü
-  — sapma yalnızca G*Power'ın kendi arama yakınsamasının scipy'den küçük
-  farkından. Kök sebep ve hipotez karşılaştırması ASSUMPTIONS.md §1'de;
-  CONTRACT.md §6 "Kapı"nın bilerek %100 değil %90 eşik koyması bu
-  belirsizliği zaten hesaba katıyor — **%83.3 ile gizli vektör setine
-  bağlı olarak kapı hâlâ riskli** (ratio=1 ağırlıklı ise geçer, ratio≠1
-  ağırlıklı ise sınırın altında kalabilir; %100 garanti, G*Power'ın arama
-  rutinini bit-bit taklit etmeyi gerektirir, kapsam dışı).
+  değerler ve ratio≠1 dahil): n1/n2/n_total **tam eşleşme oranı 30/30 =
+  %100**. Kesin formül (LEDGER.md §2d, iki bağımsız vektörde Frida ile
+  dinamik doğrulandı): `n_total = 2*ceil(x*(1+ratio)/2)` (her zaman çift
+  sayıya zorlanıyor), küçük grup doğrudan ceil'leniyor, büyük grup
+  `n_total - küçük_grup` ile türüyor — n1/n2 BAĞIMSIZ ceil'lenmiyor. Kök
+  sebep ve hipotez tarihçesi (23/30 → 24/30 → 25/30 → 30/30) ASSUMPTIONS.md
+  §1'de. CONTRACT.md §6 "Kapı" %90 eşik koymuştu; motor artık pratik
+  oracle setinin tamamında geçiyor.
 - Yuvarlanan N ne olursa olsun, ncp/critical_t/actual_power o N için her
   zaman iç tutarlı (ayrı bir regresyon testiyle korunuyor).
 - **CLI/MCP eşdeğerliği** (CONTRACT.md §7, 5 t2-indep vektörü): tam

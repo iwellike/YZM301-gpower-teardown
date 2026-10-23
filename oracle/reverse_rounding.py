@@ -1,17 +1,15 @@
 """Empirically derives and verifies the a-priori N rounding rule for t2-indep
 against oracle/t2_indep_vectors.csv. See ASSUMPTIONS.md section 1 for the
-hypotheses tested. Implements the current (best-found) rule: n1=ceil(x)
-from the continuous power-equation root; for ratio=1, n2=n1 trivially; for
-ratio!=1, n2=round_half_up(ratio*x) with a safety increment if that ever
-undershoots the target power. Confirmed via live GPowerNT.exe post-hoc
-cross-check (LEDGER.md section 2c: at fixed n1, both n2=127 and n2=128
-clear the power target, yet G*Power picks the nearer-to-continuous 127,
-not the smaller one) -- raised oracle matches 24/30 -> 25/30. The
-remaining 5/30 misses are not a rounding-rule or distribution-math problem
-(both were independently verified correct); they trace to GPowerNT.exe's
-own bisection converging to a slightly different continuous root than
-scipy's brentq, which replicating fully would require bit-for-bit
-reproducing GPowerNT.exe's internal search -- out of scope.
+full hypothesis history (23/30 -> 24/30 -> 25/30 -> 30/30). Implements the
+final, exact rule (LEDGER.md section 2d), found by hooking GPowerNT.exe's
+CRT ceil() call sites live for two independent ratio!=1 vectors:
+    x        = continuous root of actual_power(x, ratio*x) == power
+    n_total  = 2 * ceil(x * (1 + ratio) / 2)   -- always forced even
+    smaller  = ceil(x) if ratio >= 1 else ceil(ratio * x)
+    larger   = n_total - smaller
+n1/n2 are NOT independently ceiled; n_total is rounded up to an even
+number first, and the larger group absorbs the remainder. This matches
+all 30/30 oracle vectors exactly.
 """
 import csv
 import math
@@ -50,13 +48,19 @@ def continuous_n1(d, alpha, power, tails, ratio, lo=2.0):
 
 def solve_n1_n2(d, alpha, power, tails, ratio):
     x = continuous_n1(d, alpha, power, tails, ratio)
-    n1 = max(math.ceil(x), 1)
-    if ratio == 1:
-        n2 = n1
+    n_total = 2 * math.ceil(x * (1 + ratio) / 2)
+    if ratio >= 1:
+        n1 = max(math.ceil(x), 2)
+        n2 = max(n_total - n1, 2)
     else:
-        n2 = max(math.floor(ratio * x + 0.5), 1)
-        while actual_power(n1, n2, d, alpha, tails) < power:
-            n2 += 1
+        n2 = max(math.ceil(ratio * x), 2)
+        n1 = max(n_total - n2, 2)
+    while actual_power(n1, n2, d, alpha, tails) < power:
+        n_total += 2
+        if ratio >= 1:
+            n2 = n_total - n1
+        else:
+            n1 = n_total - n2
     return n1, n2
 
 
