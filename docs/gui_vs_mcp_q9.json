@@ -11,15 +11,16 @@
   },
   "mcp": {
     "output": {
-      "ncp": 3.6853051005595896,
-      "critical_t": 2.3671151937236976,
-      "df": 93,
+      "ncp": 3.6950417228136048,
+      "critical_t": 2.366674361110337,
+      "df": 94,
       "n1": 32,
-      "n2": 63,
-      "n_total": 95,
-      "actual_power": 0.9040606874839431
+      "n2": 64,
+      "n_total": 96,
+      "actual_power": 0.9057806582095971
     },
-    "seconds": 0.0014
+    "seconds": 0.002,
+    "note": "Recomputed after Oturum 2's n2=ceil(ratio*n1) fix (LEDGER.md S2b); now matches the GUI exactly. Original mismatched output (n2=63) is what motivated the fix -- see ASSUMPTIONS.md section 1."
   },
   "gui": {
     "output": {

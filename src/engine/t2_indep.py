@@ -12,8 +12,15 @@ CONTRACT.md section 9):
 
 The a-priori sample-size search and its ceil()-based rounding are described
 in LEDGER.md section 2/4 (REA evidence, GPowerNT.exe 0x4a7140) and
-ASSUMPTIONS.md section 1 (empirical verification against
-oracle/t2_indep_vectors.csv: exact for ratio=1, ~79% exact for ratio!=1).
+ASSUMPTIONS.md section 1. n1 = ceil(x) where x is the continuous root;
+n2 = ceil(ratio * n1) uses the already-rounded integer n1, not the
+continuous x (LEDGER.md section 2b: confirmed dynamically via Frida,
+GPowerNT.exe 0x4d9d88 `call ceil`, observed argument exactly 64.0 for
+n1=32/ratio=2 -- a continuous-x-based ceil(ratio*x) would not land on an
+exact integer there). 24/30 exact matches on oracle/t2_indep_vectors.csv;
+remaining misses trace to GPowerNT.exe's own noncentral-t series
+approximation differing from scipy's by ~1e-4 near ceil() boundaries, not
+to this rounding rule (see ASSUMPTIONS.md section 1).
 """
 import math
 
@@ -77,7 +84,7 @@ def _continuous_n1(d, alpha, power, tails, ratio, lo=2.0):
 def solve_a_priori(d, alpha, power, tails, ratio):
     x = _continuous_n1(d, alpha, power, tails, ratio)
     n1 = max(math.ceil(x), 2)
-    n2 = max(math.ceil(ratio * x), 2)
+    n2 = max(math.ceil(ratio * n1), 2)
     dfree = df(n1, n2)
     return {
         "ncp": ncp(n1, n2, d),

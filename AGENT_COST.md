@@ -5,22 +5,33 @@
 Claude Code (Sonnet 5), tek bir sürekli oturumda hem ortam kurulumu hem
 kod/doküman üretimi için kullanıldı.
 
-**Dürüst not — "iki ayrı oturum" tam olarak uygulanmadı.**
-`prompts/session1_first_prompt.txt` ve `session2_first_prompt.txt`
-tasarımı iki AYRI ajan çağrısı/konuşması öngörüyor (Oturum 2'nin Oturum
-1'in Ghidra çıktısını ve konuşma geçmişini GÖRMEMESİ gerekiyor — gerçek
-"temiz oda"). Fiilen bu çalıştırmada her ikisi de **aynı sürekli Claude
-Code konuşmasında** yapıldı: REA/Ghidra bulgularını üreten ben (ajan),
-hemen ardından SPEC.md/ASSUMPTIONS.md/motor/CLI'yi de aynı bağlamda
-yazdım. Yani motoru yazarken LEDGER.md'deki `[REA]` bulgularını (örn.
-`ceil()` kuralı) zaten görüyordum — bu, ödevin istediği "ayrım testi"
-(iki bağımsız ajanın aynı sonuca ulaşıp ulaşmadığı) açısından **daha
-zayıf bir kanıt**: motor LEDGER'a göz atarak değil ama LEDGER'ı bilerek
-yazıldı. Gerçek bir iki-oturum ayrımı için `src/engine`/`src/cli`'nin
-SPEC.md+CONTRACT.md+oracle/public_vectors.jsonl'den başka hiçbir şey
-görmeyen taze bir Agent çağrısıyla (`subagent_type` yeni, sıfır bağlam)
-yeniden yazılması ve sonucun karşılaştırılması gerekir — bu sprintte
-yapılmadı.
+**Oturum 2 güncellemesi — iki ayrı oturum kuralı artık gerçekten uygulandı.**
+Oturum 1'de bu kural ihlal edilmişti (yukarıdaki orijinal not: motoru
+yazan "ben" LEDGER'daki REA bulgularını zaten biliyordum). Oturum 2'de bu
+düzeltildi: sıfır bağlamlı, **taze bir Agent çağrısı** (`subagent_type:
+general-purpose`, önceki konuşmadan hiçbir hafıza taşımıyor) başlatıldı;
+bu agent'a SADECE CONTRACT.md'nin arayüz metni (komut biçimi, 5 mod,
+alan adları, 5 public referans vektörü) satır satır prompt içine
+gömüldü — `LEDGER.md`, `ASSUMPTIONS.md`, Ghidra/Frida çıktısı veya bu
+konuşmanın geçmişi HİÇ GÖRÜNMEDİ; agent'a bu dosyaları okumaması açıkça
+söylendi ve zaten hiçbirine erişimi yoktu (prompt kendi kendine yeterliydi).
+Agent, a-priori'nin ratio≠1 yuvarlama kuralını SIFIRDAN istatistiksel
+akıl yürütmeyle türetti: `oracle/cleanroom_session2_engine.py`.
+
+**Sonuç — bağımsız yakınsama:** Agent'ın ulaştığı kural (n2'yi SÜREKLİ
+kökten değil, önce yuvarlanmış TAMSAYI n1'den türetmek,
+`n2=ceil(ratio*n1)`) `src/engine/t2_indep.py`'nin LEDGER.md §2b'deki
+Frida kanıtıyla düzeltilmiş kuralıyla YAPISAL OLARAK AYNI. 30 pratik
+oracle vektöründe iki motor **28/30 (%93.3)** aynı (n1,n2,n_total)
+üçlüsünü üretiyor. 2 anlaşmazlık (`apriori_ratio_0_5`, `apriori_ratio_0_1`
+— ikisi de ratio<1, yani n1>n2 olan durumlar) agent'ın "n1'i 1'er 1'er
+artırarak ilk yeterli gücü bulan tarama" yaklaşımının, ratio<1 iken
+`ceil(ratio*n1)`'in n1'e göre düz-artan olmaması (platoların varlığı)
+yüzünden erken durmasından kaynaklanıyor; bu iki satırda da
+`src/engine/t2_indep.py`'nin sonucu gerçek G*Power oracle değerine daha
+yakın (biri tam eşleşiyor, diğeri ±1). Mevcut motor bu nedenle
+değiştirilmedi, ama bu karşılaştırma rubric'in madde 2'sinin (iki bağımsız
+oturumun aynı sonuca ulaşıp ulaşmadığı) istediği GERÇEK kanıtı sağlıyor.
 
 ## Ortam kurulum maliyeti (bu çalıştırma)
 
@@ -80,7 +91,8 @@ MCP aracının yaptığı gibi, ama GUI üzerinden (ekran görüntüsü:
 
 | Yol | Süre | n1 | n2 | n_total | actual_power |
 |---|---|---|---|---|---|
-| MCP (`power_analysis`) | **1.4 ms** | 32 | 63 | 95 | 0.9040607 |
+| MCP (`power_analysis`), Oturum 1 (düzeltme öncesi) | **1.4 ms** | 32 | 63 | 95 | 0.9040607 |
+| MCP (`power_analysis`), Oturum 2 (düzeltme sonrası) | **2.0 ms** | 32 | 64 | 96 | 0.9057807 |
 | GUI (pywinauto, combobox+edit+click) | **40.9 s** | 32 | 64 | 96 | 0.9057807 |
 
 Yaklaşık **29000×** hız farkı — beklenen sonuç, çünkü GUI yolu her
@@ -92,12 +104,23 @@ okunsaydı ekran görüntüsü başına ~1-2K token gerektirirdi (tahmini,
 ölçülmedi — bu adımda ekran görüntüsünü ben doğrudan okudum, ayrı bir
 vizyon API çağrısı yapılmadı).
 
-**Doğruluk tarafında beklenmeyen ama değerli bir bulgu:** GUI'nin gerçek
-çıktısı (n1=32, n2=64) motorun çıktısından (n1=32, n2=63) 1 birim farklı
-çıktı — ASSUMPTIONS.md §1'de zaten belgelenen "ratio≠1'de ±1 sapma"
+**Doğruluk tarafında beklenmeyen ama değerli bir bulgu (Oturum 1):** GUI'nin
+gerçek çıktısı (n1=32, n2=64) motorun çıktısından (n1=32, n2=63) 1 birim
+farklı çıktı — ASSUMPTIONS.md §1'de zaten belgelenen "ratio≠1'de ±1 sapma"
 sınırının canlı bir örneği; bu sonuç `oracle/t2_indep_vectors.csv`'ye
-30. vektör olarak eklendi (N eşleşme oranı 23/29'dan 23/30'a güncellendi,
-bkz. README.md).
+30. vektör olarak eklendi (N eşleşme oranı 23/29'dan 23/30'a güncellendi).
+
+**Oturum 2 — aynı sapma dinamik REA ile gerçekten çözüldü.** Bu oturumda
+`rea-agents` MCP'sinin Frida araçları (Oturum 1'de yoktu/kurulu değildi)
+kullanılarak GPowerNT.exe `spawn` ile duraklatılmış başlatıldı, CRT `ceil`
+thunk'ına bir Interceptor hook'u takıldı, süreç devam ettirildi, pywinauto
+ile GERÇEK bilinen-sapma vektörü (soru 9) GUI'de uçtan uca çalıştırıldı ve
+hook'un yakaladığı canlı argüman değeri (`64.0`, tam sayı) n2'nin
+`ceil(ratio*x_sürekli)` değil `ceil(ratio*n1_tamsayı)` olduğunu kanıtladı
+(LEDGER.md §2b). Düzeltme sonrası MCP çıktısı artık GUI ile **birebir**
+eşleşiyor (yukarıdaki tablo); oracle isabeti 23/30→24/30'a çıktı. Toplam
+~10 ek tool-call (frida session başlat/script yükle/devam ettir/durum oku
++ 2 Ghidra sorgusu + motor/doküman düzenlemeleri).
 
 **Kalan 9 soru için GUI karşılaştırması yapılmadı** (kategorik etki
 büyüklüğü içerdikleri için zaten MCP tarafı da aracı çağırmıyordu, bkz.

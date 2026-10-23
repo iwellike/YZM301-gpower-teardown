@@ -1,9 +1,9 @@
 """Empirically derives and verifies the a-priori N rounding rule for t2-indep
 against oracle/t2_indep_vectors.csv. See ASSUMPTIONS.md section 1 for the
-three hypotheses tested; this script implements the winning one
-(independent ceil of n1 and ratio*n1 from the continuous power-equation
-root), matching the ceil() call found via REA at GPowerNT.exe 0x4a7140
-(LEDGER.md section 2/4).
+hypotheses tested. Implements the current rule: n1=ceil(x) from the
+continuous power-equation root, n2=ceil(ratio*n1) from the already-rounded
+INTEGER n1 (not ratio*x) -- confirmed dynamically via Frida at GPowerNT.exe
+0x4d9d88 (LEDGER.md section 2b), which raised oracle matches 23/30 -> 24/30.
 """
 import csv
 import math
@@ -43,7 +43,7 @@ def continuous_n1(d, alpha, power, tails, ratio, lo=2.0):
 def solve_n1_n2(d, alpha, power, tails, ratio):
     x = continuous_n1(d, alpha, power, tails, ratio)
     n1 = max(math.ceil(x), 1)
-    n2 = max(math.ceil(ratio * x), 1)
+    n2 = max(math.ceil(ratio * n1), 1)
     return n1, n2
 
 

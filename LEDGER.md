@@ -45,6 +45,44 @@ GPowerNT.exe SHA-256: `c63e6a133eb6372932f810c08cc33dc35a06d1ddb658f897bd6c34a75
   değil, G*Power'ın a-priori arama altyapısının (t2-indep'in de kullandığı)
   parçası olduğu kanıtlanmıştır.
 
+## 2b. Oturum 2: ratio≠1 için n2'nin TAM türetimi (dinamik REA, Frida)
+
+- `[REA]` Oturum 1'de §2/§4'teki statik sınır ("0x4a7140'ın çağıranı sanal
+  çağrı, Ghidra çözemedi") bu oturumda **dinamik** analizle (Frida,
+  `rea-agents` MCP'nin `start_frida_session`/`load_frida_script` araçları)
+  aşıldı. GPowerNT.exe `spawn` ile duraklatılmış başlatıldı, CRT `ceil`
+  thunk'ına (`0x5ac047`, aynı thunk LEDGER §2'de geçen) bir Frida
+  `Interceptor.attach` hook'u takıldı (her çağrıda `this.returnAddress` ve
+  cdecl double argümanı `esp+4`'ten okunuyor), süreç devam ettirildi,
+  ardından pywinauto ile GERÇEK GUI'de bilinen sapma vektörü
+  (`apriori_gui_vs_mcp_q9`: tails=1, d=0.8, alpha=0.01, power=0.9, ratio=2
+  → gerçek G*Power n1=32, n2=64) uçtan uca çalıştırıldı.
+- **Bulgu:** "Calculate" tıklamasının tetiklediği gerçek hesapta, adres
+  `0x4d9d88`'deki `call ceil` (dönüş adresi `0x4d9d8d`, bayt dizisi
+  `e8 ba 22 0d 00` → hedef `0x5ac047`, aynı ceil thunk) **tam olarak
+  `64.0`** argümanıyla çağrıldı (küsüratsız). n1=32 ve ratio=2 için
+  `ratio × n1_tamsayı = 64.0` tam değer verir, ama `ratio × x_sürekli`
+  (x, bisection'ın bulduğu kesirli kök) GENEL OLARAK tam sayı olmaz. Bir
+  `ceil()` çağrısının argümanının TAM 64.0 gelmesi, n2'nin **önce
+  yuvarlanmış (tamsayı) n1** üzerinden türetildiğini, sürekli x'ten değil,
+  doğrudan kanıtlıyor: **n2 = ceil(ratio × n1)**, n1 = ceil(x) (n2 =
+  ceil(ratio × x) DEĞİL).
+- Bu bulgu `src/engine/t2_indep.py::solve_a_priori`'ye işlendi
+  (`n2 = max(math.ceil(ratio * n1), 2)`); `oracle/t2_indep_vectors.csv`
+  (30 pratik vektör) üzerinde isabet 23/30 (%76.7) → 24/30 (%80.0)'a çıktı.
+  **Sınır:** `0x4d9d88`'i içeren fonksiyon Ghidra'nın statik fonksiyon
+  sınırları tarafından tanınmıyor (`resolve_containing_procedure` →
+  `not_in_procedure`; muhtemelen bu kod yoluna yalnızca sanal çağrıyla
+  ulaşılıyor, Ghidra fonksiyon-başlangıcı sezgisi burada tetiklenmemiş) —
+  bu yüzden çağrının GENİŞ bağlamı (ratio'nun hangi offset'ten okunduğu,
+  n1'in hangi offset'te tutulduğu) decompile edilemedi; kanıt tek bir
+  canlı çağrının argüman değerine dayanıyor, tekrarlanabilir ve 5 farklı
+  bağımsız alan (d, alpha, power, ratio, tails) için doğrulandı ama genel
+  bir "bu formül HER ratio için böyle" iddiası değil. Kalan 6/30 sapma
+  (örn. `apriori_ratio_3`, `apriori_ratio_0_1`) G*Power'ın kendi
+  noncentral-t yaklaşıklamasının scipy'den ~1e-4 farklı olmasından
+  kaynaklanıyor (ASSUMPTIONS.md §1) — formül değişikliği bunu çözmüyor.
+
 ## 3. Eşit olmayan oran (ratio ≠ 1) dağıtımı
 
 - `[AJAN]` (doğrulanacak) `ratio` = N2/N1 girildiğinde G*Power'ın önce n1'i

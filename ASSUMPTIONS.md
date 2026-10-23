@@ -9,7 +9,9 @@
 **Varsayım:** Verilen `d, alpha, power, tails, ratio` için önce `n1`
 üzerinde sürekli (gerçel sayı) bir kök bulunur — `n2 = ratio * n1` sabit
 tutularak `actual_power(n1, ratio*n1) = power` eşitliğini sağlayan `x`.
-Sonra `n1 = ceil(x)`, `n2 = ceil(ratio * x)`.
+Sonra `n1 = ceil(x)`, `n2 = ceil(ratio * n1)` — **n2, sürekli x'ten değil,
+ÖNCE yuvarlanmış tamsayı n1'den türetiliyor** (bkz. güncelleme aşağıda,
+LEDGER.md §2b: Oturum 2'de Frida ile dinamik olarak doğrulandı).
 
 **Gerekçe:**
 - LEDGER.md §2/§4 `[REA]`: GPowerNT.exe'de a-priori arama motoru
@@ -36,19 +38,33 @@ Sonra `n1 = ceil(x)`, `n2 = ceil(ratio * x)`.
   **Seçilen: Hipotez 1** — en yüksek isabet, en basit, ve LEDGER'daki
   gerçek `ceil()` çağrısıyla doğrudan tutarlı.
 
-**Gerçek G*Power ile canlı doğrulama (bu oturumda eklendi):** AI ajanı
-katmanını test ederken soru 9'un parametreleri (tails=1, d=0.8,
-alpha=0.01, power=0.9, ratio=2) hem MCP aracıyla hem **hâlâ açık olan
-gerçek G*Power 3.1.9.7 GUI'sine** pywinauto ile girilip karşılaştırıldı:
-motor `(n1=32, n2=63, n_total=95)` üretti, gerçek G*Power `(n1=32,
-n2=64, n_total=96)` verdi — `n1` tutarlı, `n2` tam 1 birim sapıyor. Bu,
-aşağıdaki "bilinen sınır"ın canlı, taze bir örneği (bkz.
-`docs/gui_vs_mcp_q9.json`, oracle satırı `apriori_gui_vs_mcp_q9`).
+**Güncelleme (Oturum 2, dinamik REA):** Hipotez 1'in `n2=ceil(ratio*x)`
+alt-kuralı, Frida ile GPowerNT.exe'de canlı doğrulandı ve **düzeltildi**:
+gerçek ceil() çağrısının argümanı (adres `0x4d9d88`, bkz. LEDGER.md §2b)
+`ratio=2, n1=32` için tam `64.0` çıktı — bu, yalnızca n2'nin **sürekli x
+değil, önce yuvarlanmış tamsayı n1** üzerinden türetildiğinde mümkündür.
+Düzeltilmiş kural `n2=ceil(ratio*n1)` oracle setinde 23/30 (%76.7) →
+24/30 (%80.0) isabet veriyor (kod: `src/engine/t2_indep.py`). Bu artık
+`[AJAN]` ampirik tahmin değil, `[REA]` dinamik kanıt.
 
-**Bilinen sınır (dürüst değerlendirme):** Kalan sapmalar şu satırlarda:
-`apriori_ratio_3`, `apriori_ratio_10`, `apriori_ratio_0_1`, `apriori_mix1`
-(ratio=1.5), `apriori_mix3` (ratio=2), `apriori_mix7` (ratio=4),
-`apriori_gui_vs_mcp_q9` (ratio=2). Hepsinde sapma tam ±1 birim ve yön
+**Gerçek G*Power ile canlı doğrulama (Oturum 1):** AI ajanı katmanını
+test ederken soru 9'un parametreleri (tails=1, d=0.8, alpha=0.01,
+power=0.9, ratio=2) hem MCP aracıyla hem **hâlâ açık olan gerçek G*Power
+3.1.9.7 GUI'sine** pywinauto ile girilip karşılaştırıldı: motor (düzeltme
+öncesi, `n2=ceil(ratio*x)`) `(n1=32, n2=63, n_total=95)` üretti, gerçek
+G*Power `(n1=32, n2=64, n_total=96)` verdi — `n1` tutarlı, `n2` tam 1
+birim sapıyordu. Oturum 2'de bu TAM VEKTÖR Frida ile tekrar canlı
+çalıştırıldı (bkz. yukarıdaki güncelleme + LEDGER.md §2b); düzeltilmiş
+`n2=ceil(ratio*n1)` kuralı bu satırı artık **tam eşleştiriyor**
+(`docs/gui_vs_mcp_q9.json`, oracle satırı `apriori_gui_vs_mcp_q9`).
+
+**Bilinen sınır (dürüst değerlendirme, düzeltme SONRASI):** Kalan
+sapmalar şu satırlarda: `apriori_ratio_3`, `apriori_ratio_10`,
+`apriori_ratio_0_1` (bu satırda n1'in KENDİSİ 348 vs 347 sapıyor, n2
+değil — kök sebep aynı: aşağıdaki noncentral-t yaklaşıklama farkı),
+`apriori_mix1` (ratio=1.5), `apriori_mix3` (ratio=2), `apriori_mix12`
+(ratio=1.25, düzeltme ÖNCESİ doğruydu, SONRASINDA sapıyor — düzeltme net
++1 kazandırdı ama evrensel değil). Hepsinde sapma tam ±1 birim ve yön
 (üste mi alta mı sapıyor) tutarsız — bu, basit bir
 "her zaman +1 ekle/çıkar" düzeltmesiyle çözülemeyeceğini, G*Power'ın kendi
 noncentral-t/F yaklaşıklamasının (Faul ve ark. 2007/2009'da tanımlanan seri
