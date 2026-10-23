@@ -33,7 +33,12 @@ Senaryo: Eşit olmayan oranda grup büyüklüğü dağıtımı
   Motor a-priori modda çalıştırıldığında
   O zaman n2/n1 oranı, G*Power'ın gözlenen protokolündeki n1,n2 çiftiyle
     (bkz. oracle/t2_indep_vectors.csv, id=apriori_ratio_2) tam eşleşmeli
-  [REA kaynağı: LEDGER.md §3 — doldurulacak]
+  [REA kaynağı: LEDGER.md §3 (0x487300 admissible-range deseni) +
+   oracle/reverse_rounding.py ampirik analizi: n1=ceil(x), n2=ceil(ratio*x),
+   x = power(x, ratio*x)=target'ın kökü. 29 vektörlük oracle setinde bu kural
+   ratio=1 için 100%, ratio≠1 için bazı sınır değerlerde ±1 sapma veriyor
+   (bkz. ASSUMPTIONS.md) — CONTRACT.md §6 "Kapı"nın %90 (değil %100) eşik
+   koymasının nedeni tam olarak budur.
 
 Senaryo: Çok küçük etki büyüklüğü (d -> 0)
   Diyelim ki d=0.01
@@ -49,10 +54,11 @@ Senaryo: Çok büyük etki büyüklüğü (d -> büyük)
 Senaryo: Power alpha'ya çok yakın
   Diyelim ki power=0.06 ve alpha=0.05
   Motor a-priori modda çalıştırıldığında
-  O zaman motor G*Power ile aynı davranışı sergilemeli: ya küçük bir N
-    üretmeli ya da G*Power'ın kendisi de hata veriyorsa aynı error+code
-    döndürülmeli
-  [REA kaynağı: LEDGER.md §5 — doldurulacak]
+  O zaman n1=2, n2=2 (CONTRACT.md §5 alt sınırı) üretilmeli — G*Power bu
+    girdide dejenere/minimum örneklemi döndürüyor (oracle id=apriori_power_near_alpha)
+  [REA kaynağı: CONTRACT.md §5 (n1,n2≥2 sınırı) + oracle gözlemi; motorun
+   kendi kök-bulma mantığının x<2 bulduğu her durumda n1=n2=2'ye kenetlenmesi
+   gerekir, aksi hâlde kökbulucu negatif/sıfır N'de patlar]
 ```
 
 ### B. post-hoc mod — ulaşılan güç
@@ -108,12 +114,30 @@ Senaryo: Tam sayı alanları JSON tam sayı olarak döner
 
 ---
 
-## Bekleyen kalemler (LEDGER.md tamamlanınca doldurulacak)
+## Çözülen kalemler (LEDGER.md Oturum 1 `[REA]` bulgularından)
 
-- [ ] Yuvarlama kuralının kesin formu (LEDGER §2 `[REA]`)
-- [ ] ratio≠1 dağıtım kuralı (LEDGER §3 `[REA]`)
-- [ ] a-priori N arama algoritması / durma koşulu (LEDGER §4 `[REA]`)
-- [ ] Geçersiz girdiye GUI/motor tepkisi (LEDGER §5 `[REA]`)
+- [x] Yuvarlama kuralının kesin formu: `ceil()` (LEDGER §2, `0x4a7140`)
+- [x] a-priori N arama algoritması / durma koşulu: geometrik parantezleme
+  (×1.2/÷1.2) + bisection, toleranslar 1e-7 (N aralığı) / 1e-8 (güç farkı)
+  (LEDGER §4, `0x4a7140`)
+- [x] Geçersiz girdiye motor tepkisi (effect size için): `|d|<1e-5` → açık
+  hata, sessiz düzeltme yok (LEDGER §5, `0x4d4bd0` + 3 kardeş adres)
+- [x] ratio≠1 dağıtımının GENEL deseni: `[L,1/L]` admissible aralık +
+  açık hata (sessiz kırpma yok) (LEDGER §3, `0x487300`)
 
-Bu kalemler `[REA]` kanıtı olmadan kesinleştirilemez; Oturum 2'ye
-ASSUMPTIONS.md üzerinden "doğrulanacak varsayım" olarak geçecekler.
+## Hâlâ açık (ASSUMPTIONS.md'de "doğrulanacak varsayım")
+
+- [ ] t2-indep'in kendi ratio admissible-range sabiti `L` (Proportions
+  ailesi için L=0.01 doğrulandı, Means için REA ile doğrulanamadı — sanal
+  çağrı)
+- [ ] ratio≠1'de n1/n2'nin TAM hangi tamsayıya yuvarlandığı — ampirik
+  olarak (oracle/reverse_rounding*.py) `n1=ceil(x), n2=ceil(ratio*x)`
+  kuralının ratio=1'de %100, ratio≠1'de ~%80 isabet ettiği gözlendi; kalan
+  sapmalar G*Power'ın kendi noncentral-t yaklaşıklamasının sınır
+  değerlerindeki küçük farklardan kaynaklanıyor olabilir (bkz.
+  ASSUMPTIONS.md). CONTRACT.md §6 "Kapı" bilinçli olarak %100 değil %90
+  eşik koyuyor — bu tam da bu belirsizliği hesaba katıyor.
+- [ ] `alpha=0/1`, `tails=3` gibi girdiler için motor-seviyesi doğrulayıcı
+  REA ile bulunamadı (muhtemelen GUI spin-button/combobox kısıtlaması,
+  runtime validator yok); CONTRACT.md §5 aralıklarına göre `OUT_OF_RANGE`
+  ile reddedilecek şekilde varsayıldı.

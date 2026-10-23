@@ -1,0 +1,36 @@
+{
+  "question_id": 9,
+  "input": {
+    "test": "t2-indep",
+    "mode": "a-priori",
+    "tails": 1,
+    "d": 0.8,
+    "alpha": 0.01,
+    "power": 0.9,
+    "ratio": 2
+  },
+  "mcp": {
+    "output": {
+      "ncp": 3.6853051005595896,
+      "critical_t": 2.3671151937236976,
+      "df": 93,
+      "n1": 32,
+      "n2": 63,
+      "n_total": 95,
+      "actual_power": 0.9040606874839431
+    },
+    "seconds": 0.0014
+  },
+  "gui": {
+    "output": {
+      "ncp": "3.6950417",
+      "critical_t": "2.3666744",
+      "df": "94",
+      "n1": "32",
+      "n2": "64",
+      "n_total": "96",
+      "actual_power": "0.9057807"
+    },
+    "seconds": 40.91
+  }
+}

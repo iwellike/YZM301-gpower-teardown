@@ -1,0 +1,5 @@
+#!/usr/bin/env sh
+# Thin wrapper so the CLI contract's required command name works directly.
+# No calculation logic here -- forwards straight to src.cli (CONTRACT.md 2.1).
+cd "$(dirname "$0")" || exit 1
+exec python -m src.cli "$@"
