@@ -88,14 +88,21 @@ Ajan değerlendirmesini çalıştırmak için: `python -m src.agent.run_eval`.
 
 ## Demo video
 
-`docs/demo.mp4` — 68 saniyelik gerçek ekran kaydı (ffmpeg + Windows
-Terminal, `docs/demo_run.sh` çalıştırılarak kaydedildi): sürüm sorgusu,
-CONTRACT.md referans örneği (a-priori), post-hoc doğrulama, geçersiz
-girdi (`alpha=0` → `OUT_OF_RANGE`, exit 2) ve `pytest` çalışması.
-Kozmetik not: Windows Terminal'in "Termination behavior..." bilgi
-banner'ı köşede görünüyor, otomasyonla kapatılamadı — işlevsel bir sorun
-değil. Kendi kaydını almak istersen `docs/demo_script.md`'deki komutları
-kullanabilirsin.
+- `docs/demo.mp4` — 68 saniyelik gerçek ekran kaydı (ffmpeg + Windows
+  Terminal, `docs/demo_run.sh` çalıştırılarak kaydedildi): sürüm sorgusu,
+  CONTRACT.md referans örneği (a-priori), post-hoc doğrulama, geçersiz
+  girdi (`alpha=0` → `OUT_OF_RANGE`, exit 2) ve `pytest` çalışması.
+  Kozmetik not: Windows Terminal'in "Termination behavior..." bilgi
+  banner'ı köşede görünüyor, otomasyonla kapatılamadı — işlevsel bir sorun
+  değil. Kendi kaydını almak istersen `docs/demo_script.md`'deki komutları
+  kullanabilirsin.
+- `docs/demo_ratio3_fix.mp4` — ~20 saniyelik odaklı ekran kaydı
+  (`docs/record_ratio3_demo.py` ile, gerçek klavye tuş vuruşlarıyla
+  yazılmış, kopyala-yapıştır değil): `ratio≠1` a-priori düzeltmesinin
+  kanıtı — `python -m src.cli --test t2-indep --mode a-priori --tails 2
+  --d 0.5 --alpha 0.05 --power 0.8 --ratio 3` komutu çalıştırılıyor ve
+  çıktı (`n1=43, n2=127, n_total=170`) gerçek G*Power'ın değeriyle
+  birebir eşleşiyor (bkz. LEDGER.md §2d, ASSUMPTIONS.md §1).
 
 ## Takım / Yazarlar
 
