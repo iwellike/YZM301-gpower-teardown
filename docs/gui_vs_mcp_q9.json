@@ -11,16 +11,16 @@
   },
   "mcp": {
     "output": {
-      "ncp": 3.6950417228136048,
-      "critical_t": 2.366674361110337,
-      "df": 94,
+      "ncp": 3.6853051005595896,
+      "critical_t": 2.3671151937236976,
+      "df": 93,
       "n1": 32,
-      "n2": 64,
-      "n_total": 96,
-      "actual_power": 0.9057806582095971
+      "n2": 63,
+      "n_total": 95,
+      "actual_power": 0.9040606874839431
     },
     "seconds": 0.002,
-    "note": "Recomputed after Oturum 2's n2=ceil(ratio*n1) fix (LEDGER.md S2b); now matches the GUI exactly. Original mismatched output (n2=63) is what motivated the fix -- see ASSUMPTIONS.md section 1."
+    "note": "Oturum 2's n2=ceil(ratio*n1) fix matched this row exactly (n2=64), but scored 24/30 overall on oracle/t2_indep_vectors.csv. Oturum 3 switched to n2=round_half_up(ratio*x), which scores higher overall (25/30) but regresses this specific row back to n2=63 (round(62.8566)=63, GUI's real value is 64). Documented honestly as a real trade-off, not fixed to look good here -- see ASSUMPTIONS.md section 1 and LEDGER.md section 2c for why no single rounding rule gets all 30 right."
   },
   "gui": {
     "output": {

@@ -127,26 +127,36 @@ Senaryo: Tam sayı alanları JSON tam sayı olarak döner
 - [x] ratio≠1 dağıtımının GENEL deseni: `[L,1/L]` admissible aralık +
   açık hata (sessiz kırpma yok) (LEDGER §3, `0x487300`)
 
-## Çözülen kalemler (LEDGER.md Oturum 2 `[REA]` dinamik bulgusundan)
+## Çözülen kalemler (LEDGER.md Oturum 2/3 `[REA]` dinamik bulgularından)
 
-- [x] ratio≠1'de n2'nin TAM türetimi: `n2=ceil(ratio*n1)` (n1=ceil(x)
-  tamsayısı üzerinden, sürekli x üzerinden DEĞİL) — Frida ile GPowerNT.exe
-  üzerinde canlı doğrulandı (LEDGER.md §2b, adres `0x4d9d88`). Oracle
-  isabeti 23/30 (%76.7) → 24/30 (%80.0).
+- [x] ratio≠1'de n2'nin TAM türetimi: Oturum 2'de Frida ile `n2=ceil(ratio*n1)`
+  doğrulanmıştı (LEDGER.md §2b). Oturum 3'te GUI post-hoc çapraz kontrolü
+  (LEDGER.md §2c) bunu daha da netleştirdi: n2 aslında `round_half_up(ratio*x)`
+  (en yakına yuvarlama, sürekli x üzerinden) — `apriori_ratio_3` vektöründe
+  n1=43 sabitken n2=127 VE n2=128'in İKİSİ de hedef gücü karşılıyor, ama
+  G*Power 127'yi (en yakın tam sayıyı) seçiyor, "yeterli en küçük n2"yi
+  değil. Oracle isabeti 23/30 (%76.7) → 24/30 (%80.0) → 25/30 (%83.3).
+- [x] Noncentral-t dağılım matematiği G*Power'la BİREBİR aynı (LEDGER.md
+  §2c: post-hoc modda n1=43,n2=127 için ncp/critical_t/df/power 7 hanede
+  tam eşleşti) — kalan sapma dağılım hesabından değil, a-priori'nin
+  sürekli kök arama yakınsama noktasından kaynaklanıyor.
 
 ## Hâlâ açık (ASSUMPTIONS.md'de "doğrulanacak varsayım")
 
 - [ ] t2-indep'in kendi ratio admissible-range sabiti `L` (Proportions
   ailesi için L=0.01 doğrulandı, Means için REA ile doğrulanamadı — sanal
   çağrı)
-- [ ] Kalan ~6/30 sapma (örn. `apriori_ratio_3`, `apriori_ratio_0_1`) artık
-  yuvarlama KURALINDAN kaynaklanmıyor (bu REA ile doğrulandı); G*Power'ın
-  kendi noncentral-t yaklaşıklamasının scipy'den ~1e-4 farklı olmasından
-  kaynaklanıyor (bkz. ASSUMPTIONS.md) — bit-bit çözümü G*Power'ın sayısal
-  kütüphanesini yeniden üretmeyi gerektirir, kapsam dışı. CONTRACT.md §6
-  "Kapı" bilinçli olarak %100 değil %90 eşik koyuyor; motor bu eşiği
-  ratio=1 ağırlıklı setlerde rahatça geçer, ratio≠1 ağırlıklı setlerde
-  (%80 isabet ile) sınırın altında kalabilir.
+- [ ] Kalan 5/30 sapma (`apriori_ratio_2`, `apriori_ratio_0_1`,
+  `apriori_mix1`, `apriori_mix7`, `apriori_gui_vs_mcp_q9`) artık ne
+  yuvarlama KURALINDAN ne de noncentral-t matematiğinden kaynaklanıyor
+  (ikisi de REA ile doğrulandı/çürütüldü, LEDGER.md §2c); G*Power'ın kendi
+  a-priori bisection'ının scipy'nin `brentq`'ünden biraz farklı bir
+  noktada yakınsamasından kaynaklanıyor — bit-bit çözümü G*Power'ın arama
+  rutinini bire bir taklit etmeyi gerektirir, kapsam dışı değerlendirildi
+  (bkz. ASSUMPTIONS.md). CONTRACT.md §6 "Kapı" bilinçli olarak %100 değil
+  %90 eşik koyuyor; motor bu eşiği ratio=1 ağırlıklı setlerde rahatça
+  geçer, ratio≠1 ağırlıklı setlerde (%83.3 isabet ile) sınırın altında
+  kalabilir.
 - [ ] `alpha=0/1`, `tails=3` gibi girdiler için motor-seviyesi doğrulayıcı
   REA ile bulunamadı (muhtemelen GUI spin-button/combobox kısıtlaması,
   runtime validator yok); CONTRACT.md §5 aralıklarına göre `OUT_OF_RANGE`

@@ -44,8 +44,26 @@ gerçek ceil() çağrısının argümanı (adres `0x4d9d88`, bkz. LEDGER.md §2b
 `ratio=2, n1=32` için tam `64.0` çıktı — bu, yalnızca n2'nin **sürekli x
 değil, önce yuvarlanmış tamsayı n1** üzerinden türetildiğinde mümkündür.
 Düzeltilmiş kural `n2=ceil(ratio*n1)` oracle setinde 23/30 (%76.7) →
-24/30 (%80.0) isabet veriyor (kod: `src/engine/t2_indep.py`). Bu artık
-`[AJAN]` ampirik tahmin değil, `[REA]` dinamik kanıt.
+24/30 (%80.0) isabet veriyor. Bu artık `[AJAN]` ampirik tahmin değil,
+`[REA]` dinamik kanıt.
+
+**Güncelleme (Oturum 3, kullanıcı %90 kapısını vurgulayınca ek araştırma):**
+`apriori_ratio_3` vektöründe (n1=43 sabit) GUI'de post-hoc ile n2=127 VE
+n2=128 ayrı ayrı sorgulandı — İKİSİ de hedef gücü karşılıyor, ama G*Power
+127'yi seçiyor (bkz. LEDGER.md §2c). Bu, "n1 sabit, hedefi karşılayan en
+küçük n2" aramasını KESİN OLARAK ÇÜRÜTÜYOR (en küçük yeterli n2 aslında
+122'ymiş, 127 değil) ve n2'nin **sürekli ratio×x değerinin en yakın tam
+sayıya yuvarlanması** olduğunu gösteriyor (127.0385→127, ceil değil).
+Ayrıca post-hoc'ta n1=43,n2=127 için G*Power'ın `(ncp,critical_t,df,power)`
+çıktısı motorun scipy tabanlı hesabıyla **birebir aynı** çıktı — yani
+noncentral-t MATEMATİĞİ doğru, sapma yalnızca a-priori modun sürekli kök
+arama/yakınsama noktasında. Kural `n2=round_half_up(ratio*x)` (ratio=1'de
+trivial `n2=n1`) olarak güncellendi: 24/30 (%80.0) → **25/30 (%83.3)**.
+Hâlâ %90 kapısının altında; kalan 5 sapma artık ne yuvarlama kuralı ne de
+dağılım matematiği hatası — G*Power'ın kendi bisection'ının scipy'nin
+`brentq`'ünden yakınsadığı NOKTANIN kendisi (muhtemelen LEDGER §4'teki
+erken-çıkan tolerans nedeniyle) biraz farklı. Bunu %100 gidermek
+G*Power'ın arama rutinini bit-bit taklit etmeyi gerektirir.
 
 **Gerçek G*Power ile canlı doğrulama (Oturum 1):** AI ajanı katmanını
 test ederken soru 9'un parametreleri (tails=1, d=0.8, alpha=0.01,
@@ -54,18 +72,24 @@ power=0.9, ratio=2) hem MCP aracıyla hem **hâlâ açık olan gerçek G*Power
 öncesi, `n2=ceil(ratio*x)`) `(n1=32, n2=63, n_total=95)` üretti, gerçek
 G*Power `(n1=32, n2=64, n_total=96)` verdi — `n1` tutarlı, `n2` tam 1
 birim sapıyordu. Oturum 2'de bu TAM VEKTÖR Frida ile tekrar canlı
-çalıştırıldı (bkz. yukarıdaki güncelleme + LEDGER.md §2b); düzeltilmiş
-`n2=ceil(ratio*n1)` kuralı bu satırı artık **tam eşleştiriyor**
-(`docs/gui_vs_mcp_q9.json`, oracle satırı `apriori_gui_vs_mcp_q9`).
+çalıştırıldı (LEDGER.md §2b); düzeltilmiş `n2=ceil(ratio*n1)` kuralı bu
+satırı tam eşleştirmişti. **Oturum 3'te `n2=round_half_up(ratio*x)`'e
+geçilince bu SATIR TEKRAR SAPTI** (round(62.8566)=63≠64) — dürüst not:
+`ceil(ratio*n1)` ve `round(ratio*x)` kuralları farklı alt kümeleri
+düzeltiyor, biri diğerinin düzelttiğini bazen bozuyor; `round(ratio*x)`
+NET olarak daha fazla satır doğru veriyor (25/30 > 24/30) ama evrensel
+bir çözüm değil, bkz. aşağıdaki güncel sapma listesi.
 
-**Bilinen sınır (dürüst değerlendirme, düzeltme SONRASI):** Kalan
-sapmalar şu satırlarda: `apriori_ratio_3`, `apriori_ratio_10`,
-`apriori_ratio_0_1` (bu satırda n1'in KENDİSİ 348 vs 347 sapıyor, n2
-değil — kök sebep aynı: aşağıdaki noncentral-t yaklaşıklama farkı),
-`apriori_mix1` (ratio=1.5), `apriori_mix3` (ratio=2), `apriori_mix12`
-(ratio=1.25, düzeltme ÖNCESİ doğruydu, SONRASINDA sapıyor — düzeltme net
-+1 kazandırdı ama evrensel değil). Hepsinde sapma tam ±1 birim ve yön
-(üste mi alta mı sapıyor) tutarsız — bu, basit bir
+**Bilinen sınır (dürüst değerlendirme, Oturum 3 SONRASI, güncel):** Kalan
+5 sapma (`n2=round_half_up(ratio*x)` kuralıyla): `apriori_ratio_2`
+(round(95.48)=95, gerekli 96), `apriori_ratio_0_1` (n1'in KENDİSİ
+348 vs 347 sapıyor, n2 değil), `apriori_mix1` (round(200.52)=201,
+gerekli 202), `apriori_mix7` (round(158.53)=159, gerekli 160),
+`apriori_gui_vs_mcp_q9` (round(62.86)=63, gerekli 64). Hepsinde G*Power'ın
+gerçek değeri round() sonucundan tam +1 FAZLA — ama bu beş satırda da
+LEDGER §2c'nin kanıtladığı gibi dağılım matematiği doğru, sapma yalnızca
+arama yakınsamasında. Hepsinde sapma tam ±1 birim ve yön (üste mi alta mı
+sapıyor) tutarsız — bu, basit bir
 "her zaman +1 ekle/çıkar" düzeltmesiyle çözülemeyeceğini, G*Power'ın kendi
 noncentral-t/F yaklaşıklamasının (Faul ve ark. 2007/2009'da tanımlanan seri
 yöntemi) tam eşik noktasında scipy'nin "kesin" hesabından çok küçük

@@ -83,6 +83,40 @@ GPowerNT.exe SHA-256: `c63e6a133eb6372932f810c08cc33dc35a06d1ddb658f897bd6c34a75
   noncentral-t yaklaşıklamasının scipy'den ~1e-4 farklı olmasından
   kaynaklanıyor (ASSUMPTIONS.md §1) — formül değişikliği bunu çözmüyor.
 
+## 2c. Oturum 3: n2'nin "en yakına yuvarlama" olduğu CANLI doğrulandı; kalan
+sapmanın noncentral-t matematiğinden DEĞİL arama yakınsamasından geldiği kanıtlandı
+
+- `[REA]` `apriori_ratio_3` vektörü (tails=2,d=0.5,alpha=0.05,power=0.8,
+  ratio=3 → gerçek G*Power n1=43,n2=127) GUI'de a-priori modda tekrar
+  çalıştırılıp DOĞRULANDI (`oracle/probe_ratio3.py`): n1=43,n2=127,
+  actual_power=0.8044668 — CSV'deki kayıt birebir doğru, transkripsiyon
+  hatası yok.
+- `[REA]` Aynı n1=43 için GUI'de post-hoc modda n2=127 VE n2=128 ayrı
+  ayrı sorgulandı: n2=127 → power=0.8044668 (hedefi karşılıyor), n2=128
+  → power=0.8052624 (hedefi DAHA FAZLA karşılıyor). Yani n2=128 de
+  geçerli bir cevap olurdu ama G*Power 127'yi seçti — bu, a-priori
+  motorunun "n1 sabit, hedefi karşılayan EN KÜÇÜK n2" araması yapmadığını
+  kanıtlıyor (öyle olsaydı 127'den daha küçük bir n2 de yeterdi — ayrıca
+  doğrulandı: n1=43 için gücü karşılayan en küçük n2=122, 127 değil).
+  n2, sürekli kökün (ratio×x) EN YAKIN tam sayıya yuvarlanmasından geliyor
+  (127.0385 → 127), `ceil()`'den değil.
+- `[REA]` **Kritik ek kanıt — noncentral-t matematiği DEĞİL, arama
+  yakınsaması sorunlu:** post-hoc modda n1=43,n2=127 için GUI'nin verdiği
+  `(ncp, critical_t, df, power)` = `(2.8338811, 1.9741852, 168,
+  0.8044668)` — bu motorun kendi scipy tabanlı hesabıyla **ondalık
+  noktasına kadar birebir aynı** (bkz. `src/engine/t2_indep.py::
+  solve_post_hoc` ile çapraz kontrol). Yani G*Power'ın noncentral-t
+  dağılım hesaplaması scipy'den FARKLI DEĞİL — motorun kendi dağılım
+  matematiği doğru. Sapmanın tek kaynağı, a-priori modun SÜREKLI KÖKÜ
+  (x) bulma aşamasında G*Power'ın kendi bisection'ının scipy'nin
+  `brentq`'ünden (xtol=1e-13) biraz farklı bir noktada yakınsaması —
+  LEDGER §4'teki gevşek tolerans (N-aralığı 1e-7, güç-farkı 1e-8 ile
+  ERKEN ÇIKAN bisection) bunu açıklıyor, ama tam telafisi G*Power'ın
+  kendi arama rutinini bit-bit taklit etmeyi gerektirir (kapsam dışı
+  değerlendirildi, bkz. ASSUMPTIONS.md §1).
+- Bu bulgularla `n2 = round_half_up(ratio × x)` (ratio=1 için trivial
+  `n2=n1`) kuralına geçildi; 30 vektörde isabet **24/30 → 25/30 (%83.3)**.
+
 ## 3. Eşit olmayan oran (ratio ≠ 1) dağıtımı
 
 - `[AJAN]` (doğrulanacak) `ratio` = N2/N1 girildiğinde G*Power'ın önce n1'i

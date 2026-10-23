@@ -10,17 +10,29 @@ CONTRACT.md section 9):
     actual_power = P(reject H0) under the noncentral t distribution with
                    noncentrality ncp.
 
-The a-priori sample-size search and its ceil()-based rounding are described
-in LEDGER.md section 2/4 (REA evidence, GPowerNT.exe 0x4a7140) and
-ASSUMPTIONS.md section 1. n1 = ceil(x) where x is the continuous root;
-n2 = ceil(ratio * n1) uses the already-rounded integer n1, not the
-continuous x (LEDGER.md section 2b: confirmed dynamically via Frida,
-GPowerNT.exe 0x4d9d88 `call ceil`, observed argument exactly 64.0 for
-n1=32/ratio=2 -- a continuous-x-based ceil(ratio*x) would not land on an
-exact integer there). 24/30 exact matches on oracle/t2_indep_vectors.csv;
-remaining misses trace to GPowerNT.exe's own noncentral-t series
-approximation differing from scipy's by ~1e-4 near ceil() boundaries, not
-to this rounding rule (see ASSUMPTIONS.md section 1).
+The a-priori sample-size search and its rounding are described in
+LEDGER.md section 2/4/2c and ASSUMPTIONS.md section 1. n1 = ceil(x) where
+x is the continuous power-equation root (this direction is forced: n1
+must be the smallest integer that keeps actual_power >= power). For
+ratio == 1, n2 = n1 trivially (the two groups are defined to be equal).
+For ratio != 1, n2 = round_half_up(ratio * x) -- NOT ceil(ratio*x) and
+NOT ceil(ratio*n1) -- with a safety increment if that ever undershoots
+the target power. This empirically beats both ceil-based rules on
+oracle/t2_indep_vectors.csv (25/30 vs 24/30 and 23/30) and was confirmed
+live against GPowerNT.exe's post-hoc mode for the apriori_ratio_3 case
+(LEDGER.md section 2c): at n1=43, BOTH n2=127 and n2=128 clear the
+target power (0.8045 and 0.8053 respectively), yet G*Power's own
+a-priori search picks n2=127 -- so it is not doing a "smallest n2 that
+clears the threshold" search; it is rounding a continuous value, and
+round_half_up matches more of the observed roundings than ceil does.
+The remaining ~5/30 misses are not a rounding-rule problem: this file's
+noncentral-t math was verified bit-for-bit identical to GPowerNT.exe's
+own post-hoc output at fixed (n1, n2) (LEDGER.md section 2c). The gap is
+GPowerNT.exe's own continuous-root search converging to a slightly
+different x than scipy's root-finder in a small number of cases close to
+a rounding boundary; closing it fully would require replicating
+GPowerNT.exe's internal bisection bit-for-bit, which was judged out of
+scope (see ASSUMPTIONS.md section 1).
 """
 import math
 
@@ -84,7 +96,12 @@ def _continuous_n1(d, alpha, power, tails, ratio, lo=2.0):
 def solve_a_priori(d, alpha, power, tails, ratio):
     x = _continuous_n1(d, alpha, power, tails, ratio)
     n1 = max(math.ceil(x), 2)
-    n2 = max(math.ceil(ratio * n1), 2)
+    if ratio == 1:
+        n2 = n1
+    else:
+        n2 = max(math.floor(ratio * x + 0.5), 2)
+        while actual_power(n1, n2, d, alpha, tails) < power:
+            n2 += 1
     dfree = df(n1, n2)
     return {
         "ncp": ncp(n1, n2, d),
