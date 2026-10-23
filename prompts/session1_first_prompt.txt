@@ -1,0 +1,40 @@
+[OTURUM 1 — İNCELEME. Bu oturumun ürünü yalnızca LEDGER.md, oracle/ içeriği ve prompts/session1_first_prompt.txt'dir. Kod yazılmaz.]
+
+Görev: YZM301 Teardown Sprint. Test ailesi: t testi, iki bağımsız ortalama
+(t2-indep), klinik örnek ilaç ve plasebo.
+
+Elimde:
+- CONTRACT.md: gpower-clone CLI'nin dış sözleşmesi (alan adları, JSON çıktı
+  biçimi, hata kodları, 25 açık referans vektörü). Bu dosya hesap DAVRANIŞINI
+  tanımlamıyor, yalnızca arayüzü tanımlıyor.
+- G*Power 3.1.9.7 (Windows), resmi sayfadan indirildi:
+  https://www.psychologie.hhu.de/.../GPowerWin_3.1.9.7.zip
+  GPowerNT.exe SHA-256: c63e6a133eb6372932f810c08cc33dc35a06d1ddb658f897bd6c34a754efc81
+- REA (npx rea-agents) ve Ghidra 12.1.4 (GHIDRA_INSTALL_DIR ayarlı).
+
+Yapılacaklar:
+1. G*Power'ı pywinauto (UIA) ile sürerek t2-indep ailesi için a-priori ve
+   post-hoc modlarında en az 30 oracle vektörü topla; her biri için ekran
+   görüntüsü al (oracle/screenshots/). CONTRACT.md Bölüm 9'daki örnekle
+   (tails=1, d=0.5, alpha=0.05, power=0.95, ratio=1 ->
+   n1=88, n2=88, n_total=176, actual_power=0.9514254) doğrula.
+   Sınır değerleri dahil et: d çok küçük, d çok büyük, power<=alpha'ya yakın,
+   eşit olmayan ratio (0.1 ile 10 arası), geçersiz girdiler (negatif d,
+   alpha=0, alpha=1, tails=3).
+2. REA + Ghidra ile GPowerNT.exe'de t2-indep hesap yolunu bul. Aradığım
+   KILAVUZDA YAZMAYAN davranışlar:
+   - N nasıl yuvarlanıyor (ceil mi, farklı bir kural mı)?
+   - Eşit olmayan ratio'da n1/n2 nasıl dağıtılıyor (hangisi önce yuvarlanıyor)?
+   - a-priori'deki N arama/iterasyon hangi koşulda duruyor?
+   - Geçersiz girdiye (örn. alpha=0, d<0) nasıl tepki veriyor: sessizce
+     düzeltme mi, hata mesajı mı, sonsuz döngü mü?
+   Her bulguyu LEDGER.md'ye şu formatta yaz:
+   `[REA] <iddia> — <fonksiyon adresi veya dize referansı>, <kısa alıntı (tek satır, decompile tam çıktısı DEĞİL)>`
+   Kılavuzda zaten yazan şeyleri `[DOK]` etiketle, kanıtsız çıkarımları
+   `[AJAN]` etiketle.
+3. Decompile edilmiş C/pseudo-kod ÇIKTISINI dosyaya YAZMA; yalnızca kısa
+   alıntı + adres. GPowerNT.exe repoya KONMAZ (.gitignore'da zaten hariç).
+
+Çıktı: LEDGER.md (güncellenmiş), oracle/t2_indep_vectors.csv,
+oracle/screenshots/*.png. SPEC.md'yi bu oturumda YAZMA — o, LEDGER.md
+tamamlandıktan sonra ayrı bir adımda, bu bulgulardan çıkarılacak.

@@ -1,0 +1,30 @@
+[OTURUM 2 — TEMİZ ODA YAZIM. Bu oturum Ghidra çıktısını, decompile'ı ya da
+Oturum 1'in konuşma geçmişini GÖRMEZ. Yalnızca aşağıdaki dosyalar verilir:
+SPEC.md, CONTRACT.md, oracle/public_vectors.jsonl. Başka hiçbir bağlam yok.]
+
+Görev: SPEC.md'deki Gherkin kabul kriterlerini ve CONTRACT.md'deki CLI
+sözleşmesini kullanarak t2-indep (t testi, iki bağımsız ortalama) güç
+analizi motorunu ve CLI'yi Python ile yeniden yaz.
+
+Kurallar:
+- Hesap mantığı tek bir motor modülünde olacak (src/engine/). CLI (src/cli/)
+  bu motoru çağıran ince bir katman; hesap mantığını CLI'ye kopyalama.
+  Aynı kural MCP ve ajan katmanları için de geçerli: hepsi aynı motoru
+  çağırır.
+- scipy.stats (noncentral t dağılımı dahil) kullanmakta serbestsin.
+- CONTRACT.md Bölüm 2.3/2.4'teki JSON çıktı ve hata biçimine birebir uy:
+  tam sayı alanları JSON tam sayı, ondalıklar tam double hassasiyet, hata
+  durumunda {"error":..., "code":..., "field":...} ve sıfırdan farklı çıkış
+  kodu.
+- SPEC.md'de belirsiz kalan bir davranış varsa (örn. "yuvarlama kuralı X
+  olabilir") varsayımını kodda bir yorum satırıyla değil, ayrı bir
+  ASSUMPTIONS.md dosyasında gerekçesiyle belirt — bunlar diferansiyel testte
+  doğrulanacak.
+- Kendi kodunu doğrulamak için oracle/public_vectors.jsonl'deki 25 vektörü
+  kullan (bunlar G*Power'ın resmi örnekleri, gizli değil).
+- Testler: her kural için en az bir pytest testi; sınır değerler (çok küçük/
+  büyük d, power<=alpha, eşit olmayan ratio, geçersiz girdi) dahil.
+
+Çıktı: src/engine/, src/cli/, tests/, ASSUMPTIONS.md. SPEC.md'yi okumadan
+önce aklından geçen hiçbir G*Power varsayımını kullanma; yalnızca SPEC.md,
+CONTRACT.md ve oracle/public_vectors.jsonl'e dayan.

@@ -1,0 +1,28 @@
+# G*Power binary - resmi sayfa dışında dağıtım yasak, repoya KONMAZ
+GPower.exe
+**/GPower.exe
+GPowerWin_*.zip
+*.gpd
+
+# Ghidra proje/analiz dosyaları (decompile çıktısı repoya konmaz)
+*.gpr
+*.rep/
+ghidra_projects/
+decompile_raw/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+
+# Node
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Büyük indirilen araçlar (ayrı kurulur, repoya girmez)
+/tools/
